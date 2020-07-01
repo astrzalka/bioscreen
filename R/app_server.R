@@ -14,7 +14,7 @@ app_server <- function( input, output, session ) {
       if (is.null(inFile_excel_mapa))
         return(NULL)
       # plik zawierający mapę płytki
-      mapa <- read_excel(path = inFile_excel_mapa$datapath)
+      mapa <- readxl::read_excel(path = inFile_excel_mapa$datapath)
       
       inFile_excel_bio <- input$dane_bio
       if (is.null(inFile_excel_bio))
@@ -22,7 +22,7 @@ app_server <- function( input, output, session ) {
       # plik zawierający dane z bioscreen
       
       if(input$format == 'xlsx'){
-        bioscreen <- read_excel(path = inFile_excel_bio$datapath, skip = input$linie_usun)
+        bioscreen <- readxl::read_excel(path = inFile_excel_bio$datapath, skip = input$linie_usun)
       }
       # bioscreen <- read.xls(xls = inFile_excel_bio$datapath, skip = input$linie_usun)
       
@@ -63,7 +63,7 @@ app_server <- function( input, output, session ) {
       wzor <- subset(as.data.frame(cbind(unlist(wzor), unlist(mapa)), stringsAsFactors = FALSE), !is.na(V2))
       
       # dodanie kolumny z powtórzeniami dla każdego szczepu
-      wzor <- wzor %>% group_by(V2) %>% mutate(powtorzenie = 1:n())
+      wzor <- wzor %>% dplyr::group_by(V2) %>% dplyr::mutate(powtorzenie = 1:dplyr::n())
       
       # zmiana nazw kolumn - żeby można był‚o póżniej połączyć z danymi
       colnames(wzor) <- c("nazwa", "szczep", "powtorzenie")
@@ -80,64 +80,74 @@ app_server <- function( input, output, session ) {
       # przejście do formatu wąskiego, kolumny czas, Time i wszystkie zawierające pomiary blank są traktowane jako 
       # wartości identyfikujące. Kolumna nazwa będzie zawierać dotychczasowe nazwy kolumn, a kolumna absorbancja 
       # wartości zmierzone przez bioscreen
-      bioscreen <- gather(bioscreen, "nazwa", "absorbancja", -Time, -czas, -which(colnames(bioscreen) %in% kontrola))
+      bioscreen <- tidyr::gather(bioscreen, "nazwa", "absorbancja", -Time, -czas, -which(colnames(bioscreen) %in% kontrola))
       
       # łączenie tabeli z wynikami z przygotowanym wzorem nazw według nazw kolumn np. 101
-      bioscreen <- left_join(bioscreen, wzor, by = "nazwa")
+      bioscreen <- dplyr::left_join(bioscreen, wzor, by = "nazwa")
       
       # podział‚ na grupy według szczepu, czasu i powtorzenia, wybieramy tylko kolumny zawierające X w nazwie(blanki)
       # łączymy blanki do formatu wąskiego (o ile jest więcej niż jedna), ponownie grupujemy i wyciągamy średnią - 
       # kolumna blank, dołączamy do wejściowych danych (test3) i odrzucamy kolumny zawierające X (nie będą już 
       # potrzebne), na koniec odejmujemy od wartości absorbancji blank
       
-      dane <- bioscreen %>% group_by(szczep, powtorzenie, czas) %>%
-        select(kontrola) %>%
-        gather("well", "blank", -szczep, -powtorzenie, -czas) %>%
-        group_by(szczep, powtorzenie, czas) %>%
-        summarize(blank = mean(blank)) %>%
-        left_join(bioscreen, by = c("szczep", "powtorzenie", "czas")) %>%
-        select(szczep, powtorzenie, czas, blank, absorbancja) %>%
-        mutate(value = absorbancja - blank)
+      dane <- bioscreen %>% dplyr::group_by(szczep, powtorzenie, czas) %>%
+        dplyr::select(kontrola) %>%
+        tidyr::gather("well", "blank", -szczep, -powtorzenie, -czas) %>%
+        dplyr::group_by(szczep, powtorzenie, czas) %>%
+        dplyr::summarize(blank = mean(blank)) %>%
+        dplyr::left_join(bioscreen, by = c("szczep", "powtorzenie", "czas")) %>%
+        dplyr::select(szczep, powtorzenie, czas, blank, absorbancja) %>%
+        dplyr::mutate(value = absorbancja - blank)
       
-      return(dane)
+      return(list(dane, 
+                  mapa))
       
     })
     
+
+    
     output$dane <- renderTable({
+      
+        if(input$czy_filtr == 'Nie'){
+          head(dane_bio()[[1]], n = 10)
+        } else {
+          head(dane_wczytane(), n = 10)
+        }
+    })
+    
+    output$mapa <- renderTable({
+      
       if(input$czy_filtr == 'Nie'){
-        head(dane_bio())
-      }
-      if(input$czy_filtr == 'Tak'){
-        head(dane_wczytane())
-      }
+        dane_bio()[[2]]
+      } 
     })
     
     dane_filtr <- reactive({    
       
-      dane <- dane_bio()
+      dane <- dane_bio()[[1]]
       
       # podział‚ na grupy według szczepu i powtórzenia, następnie dodanie kolumny z maksymalną wartością 
       # absorbancji, usunięcie powtórzeń, których maksima nie mieszczą się w zakresie podanym przez użytkownika
-      dane_1 <- dane %>% group_by(szczep, powtorzenie) %>%
-        mutate(maksimum = max(value)) %>%
-        filter(maksimum >= input$filtr_down, maksimum <= input$filtr_up)
+      dane_1 <- dane %>% dplyr::group_by(szczep, powtorzenie) %>%
+        dplyr::mutate(maksimum = max(value)) %>%
+        dplyr::filter(maksimum >= input$filtr_down, maksimum <= input$filtr_up)
       
       # Obliczenie odległości od mediany absorbancji każdego powtórzenia i odrzucenie wszystkich z odległością 
       # powyżej podanej wartości
       
-      dane_2 <- dane_1 %>% group_by(szczep, czas) %>%
-        mutate(mediana = median(value)) %>%
-        group_by(szczep, czas, powtorzenie) %>%
-        mutate(odl_med = value - mediana) %>%
-        group_by(szczep, powtorzenie) %>%
-        mutate(sr_odl_med = mean(abs(odl_med))) %>%
-        filter(sr_odl_med <= input$filtr_mediana)
+      dane_2 <- dane_1 %>% dplyr::group_by(szczep, czas) %>%
+        dplyr::mutate(mediana = median(value)) %>%
+        dplyr::group_by(szczep, czas, powtorzenie) %>%
+        dplyr::mutate(odl_med = value - mediana) %>%
+        dplyr::group_by(szczep, powtorzenie) %>%
+        dplyr::mutate(sr_odl_med = mean(abs(odl_med))) %>%
+        dplyr::filter(sr_odl_med <= input$filtr_mediana)
       
       dane <- dane_2
       
       if(input$wyrownac == 'Tak'){
-        dane <- dane %>% group_by(szczep, powtorzenie) %>%
-          mutate(value = value - min(value))
+        dane <- dane %>% dplyr::group_by(szczep, powtorzenie) %>%
+          dplyr::mutate(value = value - min(value))
       }
       
       return(dane)  
@@ -149,10 +159,10 @@ app_server <- function( input, output, session ) {
       
       dane <- dane_filtr()
       
-      p <- ggplot(dane, environment = envir, aes(x = czas, y = value, color = factor(powtorzenie)))
+      p <- ggplot2::ggplot(dane, environment = envir, ggplot2::aes(x = czas, y = value, color = factor(powtorzenie)))
       
-      p <- p + geom_line()+
-        facet_wrap(~ szczep)
+      p <- p + ggplot2::geom_line()+
+        ggplot2::facet_wrap(~ szczep)
       
       print(p)
     })  
@@ -167,10 +177,10 @@ app_server <- function( input, output, session ) {
       
       dane <- dane_filtr()
       
-      dane <- dane %>% group_by(szczep, czas) %>%
-        summarize(pomiar = mean(value), odch = sd(value), n = n(),
+      dane <- dane %>% dplyr::group_by(szczep, czas) %>%
+        dplyr::summarize(pomiar = mean(value), odch = sd(value), n = dplyr::n(),
                   min = pomiar - odch, max = pomiar + odch) %>%
-        separate(szczep, into = c('szczep', 'warunki'), sep = '/')
+        tidyr::separate(szczep, into = c('szczep', 'warunki'), sep = '/')
       
       return(dane)
     })
@@ -195,22 +205,22 @@ app_server <- function( input, output, session ) {
         dane <- dane_wczytane()
       }
       
-      dane %>% filter(szczep %in% input$szczepy) %>%
-        filter(warunki %in% input$warunki) %>%
-        filter(czas <= input$filtr_czas[2]*60, czas >= input$filtr_czas[1]*60) -> dane
+      dane %>% dplyr::filter(szczep %in% input$szczepy) %>%
+        dplyr::filter(warunki %in% input$warunki) %>%
+        dplyr::filter(czas <= input$filtr_czas[2]*60, czas >= input$filtr_czas[1]*60) -> dane
       
-      p <- ggplot(dane, environment = envir, aes(x = czas/60, y = pomiar, color = szczep))
+      p <- ggplot2::ggplot(dane, environment = envir, ggplot2::aes(x = czas/60, y = pomiar, color = szczep))
       
-      p <- p + geom_line(size = 1)+
-        facet_wrap(~ warunki)+
-        theme_bw()+
-        theme(text = element_text(size = 15))+
-        scale_color_viridis(discrete = TRUE, name = input$legend)
+      p <- p + ggplot2::geom_line(size = 1)+
+        ggplot2::facet_wrap(~ warunki)+
+        ggplot2::theme_bw()+
+        ggplot2::theme(text = ggplot2::element_text(size = 15))+
+        ggplot2::scale_color_viridis_d(name = input$legend)
       
       if(input$sd == 'Tak'){
-        p <- p + geom_ribbon(aes(x = czas/60, fill = szczep, ymin = min, ymax = max),
+        p <- p + ggplot2::geom_ribbon(ggplot2::aes(x = czas/60, fill = szczep, ymin = min, ymax = max),
                              alpha = 0.33)+
-          scale_fill_viridis(discrete = TRUE, name = input$legend)
+          ggplot2::scale_fill_viridis_d(name = input$legend)
       }
       
       if(input$ll == 'Tak'){
@@ -222,12 +232,12 @@ app_server <- function( input, output, session ) {
         
         dane2 <- cbind(dane, nowe_dane)
         
-        p <- p + geom_line(data = dane2, aes(x = czas/60, y = nowe_dane, color = szczep),
+        p <- p + ggplot2::geom_line(data = dane2, ggplot2::aes(x = czas/60, y = nowe_dane, color = szczep),
                            size = 2)
         
       }
-      p <- p + xlab(input$xlab)+
-        ylab(input$ylab)
+      p <- p + ggplot2::xlab(input$xlab)+
+        ggplot2::ylab(input$ylab)
       print(p)
     })  
     
