@@ -1,0 +1,13 @@
+Package: bioscreen
+Title: Bioscreen app
+Version: 0.0.0.9000
+Authors@R: person('Agnieszka', 'Strzałka', email = 'the.larch19@gmail.com', role = c('cre', 'aut'))
+Description: Cleaning, filtering and visualization of bioscreen results.
+License: MIT + file LICENSE
+Imports: 
+    config,
+    golem,
+    shiny
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.1.1
