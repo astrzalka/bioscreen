@@ -19,10 +19,10 @@ app_ui <- function(request) {
                           sidebarPanel(
                             "Wczytaj plik zawierający mapę i dane z bioscreen w formacie .xlsx lub .xls", 
                             fileInput('dane_mapa', 'Wybierz plik excel zawierający mapę płytki'),
-                            radioButtons('format', "Czy dane do wczytania są w formacie xlsx (zapisane w excell) lub csv (wygenerowane przez bioscreen)?", 
+                            radioButtons('format', "Czy dane do wczytania są w formacie xlsx (zapisane w excel) lub csv (wygenerowane przez bioscreen)?", 
                                          choices = c('xlsx', 'csv'), inline = TRUE, selected = 'csv'),
                             fileInput('dane_bio', 'Wybierz plik excel lub csv zawierający dane z bioscreena'),
-                            numericInput('linie_usun', "Ile linijek pominąć podczas wczytywania (zwykle 2)", 2),
+                            numericInput('linie_usun', "Ile linijek pominąć podczas wczytywania pliku xlsx (zwykle 2)", 2),
                             numericInput('czas_bio', 'Co ile minut wykonywano pomiar absorbancji?', 10),
                             radioButtons('czy_filtr', 'Czy chcesz wczytać wcześniej odfiltrowane dane?', 
                                          choices = c('Tak', 'Nie'), inline = TRUE, selected = 'Nie'),
@@ -90,7 +90,26 @@ app_ui <- function(request) {
                             width = 9
                           )
                         )
-               )
+               ),
+               tabPanel('Pomoc',
+                        p(strong('1. Zakładka Wczytanie danych -'),' - potrzebne są:'),
+                        p('* plik .csv wygenerowany z programu bioscreena albo wcześniej zapisany w excelu plik .xlsx'),
+                        p('* plik .xlsx zawierający mapę płytki - konieczny do poprawnego przyporządkowania kolumn w pliku z danymi do nazw szczepów'),
+                        p('każda nazwa szczepu powinna trzymać się formatu: szczep/warunki. Jak wszystkie szczepy są w jednych warunkach - to można po / napisać np. 0.'),
+                        p('Jeżeli dana studzienka zawiera samą pożywkę i chcemy jej wartość odjąć od otrzymanych wyników to powinna nazywać się blank,
+może być więcej niż jeden blank na płytce, bez żadnego blanka program nie zadziała.'),
+                        p('Przykładowe pliki z z mapą i danymi znajdują się na stronie GitHub'),
+                        p(strong('2. Zakładka Filtrowanie -'),' pozwala odrzucić z analizy te powtórzenia które nie pasują pod względem
+maksymalnej lub minimalnej absorbancji oraz odrzucić krzywe odstające pod względem ich podobieństwa
+do mediany z wszystkich powtórzeń'),
+                        p('Odfiltrowane dane można zapisać do innych analiz w formacie .csv'),
+                        p(strong('3. Zakładka Krzywe wzrostu'),' - Rysuje uśredniony wykres dla wszystich odfiltrowanych powtórzeń,
+można wybrać które szczepy lub warunki będą widoczne na wykresie
+można dodać do wykresu odchylenie standardowe i/lub dopasowany model wzrostu
+(to drugie tylko gdy wybrano pojedyncze warunki)'),
+                        p('Przygotowany wykres można zapisać jako .png')
+                        
+                        )
     )
   )
   
