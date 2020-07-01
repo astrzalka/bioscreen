@@ -20,6 +20,7 @@ usethis::use_package( "dplyr" )
 usethis::use_package( "tidyr" )
 usethis::use_package( "readxl" )
 usethis::use_package( "shinythemes" )
+usethis::use_package( "drc" )
 
 ## Add modules ----
 ## Create a module infrastructure in R/
