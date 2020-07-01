@@ -65,7 +65,7 @@ app_server <- function( input, output, session ) {
       # dodanie kolumny z powtórzeniami dla każdego szczepu
       wzor <- wzor %>% dplyr::group_by(V2) %>% dplyr::mutate(powtorzenie = 1:dplyr::n())
       
-      # zmiana nazw kolumn - żeby można był‚o póżniej połączyć z danymi
+      # zmiana nazw kolumn - żeby można było póżniej połączyć z danymi
       colnames(wzor) <- c("nazwa", "szczep", "powtorzenie")
       
       # wybranie nazw kolumn, które zawierają kontrolę (sama pożywka)
@@ -162,7 +162,11 @@ app_server <- function( input, output, session ) {
       p <- ggplot2::ggplot(dane, environment = envir, ggplot2::aes(x = czas, y = value, color = factor(powtorzenie)))
       
       p <- p + ggplot2::geom_line()+
-        ggplot2::facet_wrap(~ szczep)
+        ggplot2::facet_wrap(~ szczep)+
+        ggplot2::theme_bw()+
+        ggplot2::xlab('Czas')+
+        ggplot2::ylab('Absorbancja')+
+        ggplot2::scale_color_discrete(name = '')
       
       print(p)
     })  

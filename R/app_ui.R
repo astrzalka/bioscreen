@@ -85,8 +85,8 @@ app_ui <- function(request) {
                           
                           
                           mainPanel(
-                            plotOutput("krzywe_final", height = "700px"),
-                            width = 3
+                            plotOutput("krzywe_final", height = "700px", width = '100%'),
+                            width = 9
                           )
                         )
                )
