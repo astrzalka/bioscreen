@@ -231,7 +231,7 @@ app_server <- function( input, output, session ) {
       if(input$ll == 'Tak'){
         
         #library(drc)
-        model <- drc::drm(pomiar~czas, curveid = szczep, data = dane, fct = drc::LL.4())
+        model <- drc::drm(pomiar~czas, curveid = szczep, data = dane, fct = drc::LL.3())
         
         nowe_dane <- predict(model)
         
