@@ -62,3 +62,5 @@ usethis::use_appveyor()
 # go to dev/03_deploy.R
 rstudioapi::navigateToFile("dev/03_deploy.R")
 
+golem::set_golem_version('0.2')
+

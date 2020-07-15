@@ -17,16 +17,20 @@ app_ui <- function(request) {
                         
                         sidebarLayout(
                           sidebarPanel(
-                            "Wczytaj plik zawierający mapę i dane z bioscreen w formacie .xlsx lub .xls", 
-                            fileInput('dane_mapa', 'Wybierz plik excel zawierający mapę płytki'),
-                            radioButtons('format', "Czy dane do wczytania są w formacie xlsx (zapisane w excel) lub csv (wygenerowane przez bioscreen)?", 
-                                         choices = c('xlsx', 'csv'), inline = TRUE, selected = 'csv'),
-                            fileInput('dane_bio', 'Wybierz plik excel lub csv zawierający dane z bioscreena'),
-                            numericInput('linie_usun', "Ile linijek pominąć podczas wczytywania pliku xlsx (zwykle 2)", 2),
-                            numericInput('czas_bio', 'Co ile minut wykonywano pomiar absorbancji?', 10),
                             radioButtons('czy_filtr', 'Czy chcesz wczytać wcześniej odfiltrowane dane?', 
                                          choices = c('Tak', 'Nie'), inline = TRUE, selected = 'Nie'),
-                            fileInput('dane_filtr', 'Wybierz plik csv zawierający odfiltrowane dane, zapisane wcześniej z shiny'),
+                            conditionalPanel(condition = 'input.czy_filtr == "Nie"',
+                                             "Wczytaj plik zawierający mapę i dane z bioscreen w formacie .xlsx lub .xls", 
+                                             fileInput('dane_mapa', 'Wybierz plik excel zawierający mapę płytki'),
+                                             radioButtons('format', "Czy dane do wczytania są w formacie xlsx (zapisane w excel) lub csv (wygenerowane przez bioscreen)?", 
+                                                          choices = c('xlsx', 'csv'), inline = TRUE, selected = 'csv'),
+                                             fileInput('dane_bio', 'Wybierz plik excel lub csv zawierający dane z bioscreena'),
+                                             numericInput('linie_usun', "Ile linijek pominąć podczas wczytywania pliku xlsx (zwykle 2)", 2),
+                                             numericInput('czas_bio', 'Co ile minut wykonywano pomiar absorbancji?', 10)
+                            ),
+                            conditionalPanel(condition = 'input.czy_filtr == "Tak"',
+                            fileInput('dane_filtr', 'Wybierz plik csv zawierający odfiltrowane dane, zapisane wcześniej z shiny')
+                            ),
                             width = 3
                             
                           ),
@@ -109,7 +113,7 @@ można dodać do wykresu odchylenie standardowe i/lub dopasowany model wzrostu
 (to drugie tylko gdy wybrano pojedyncze warunki)'),
                         p('Przygotowany wykres można zapisać jako .png')
                         
-                        )
+               )
     )
   )
   
