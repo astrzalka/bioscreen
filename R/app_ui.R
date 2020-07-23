@@ -26,10 +26,12 @@ app_ui <- function(request) {
                                                           choices = c('xlsx', 'csv'), inline = TRUE, selected = 'csv'),
                                              fileInput('dane_bio', 'Wybierz plik excel lub csv zawierający dane z bioscreena'),
                                              numericInput('linie_usun', "Ile linijek pominąć podczas wczytywania pliku xlsx (zwykle 2)", 2),
-                                             numericInput('czas_bio', 'Co ile minut wykonywano pomiar absorbancji?', 10)
+                                             numericInput('czas_bio', 'Co ile minut wykonywano pomiar absorbancji?', 10),
+                                             numericInput("usun_blank", "Usuń pomiary dla blank jeżeli różnica pomiędzy minimu a maksimum przekracza:",
+                                                          value = 0.1, min = 0, max = 1, step = 0.05)
                             ),
                             conditionalPanel(condition = 'input.czy_filtr == "Tak"',
-                            fileInput('dane_filtr', 'Wybierz plik csv zawierający odfiltrowane dane, zapisane wcześniej z shiny')
+                                             fileInput('dane_filtr', 'Wybierz plik csv zawierający odfiltrowane dane, zapisane wcześniej z shiny')
                             ),
                             width = 3
                             
@@ -37,8 +39,12 @@ app_ui <- function(request) {
                           
                           
                           mainPanel(
+                            h4("Dane po zmianie formatu na wąski"),
                             tableOutput("dane"),
+                            h4("Wczytana mapa płytki"),
                             tableOutput("mapa"),
+                            h4("Absorbancja studzienek blank - czysta pożywka"),
+                            plotOutput("wykres_blank"),
                             width = 9
                           )
                         )
