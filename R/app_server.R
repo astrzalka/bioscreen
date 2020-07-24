@@ -69,14 +69,21 @@ app_server <- function( input, output, session ) {
     # zmiana nazw kolumn - żeby można było póżniej połączyć z danymi
     colnames(wzor) <- c("nazwa", "szczep", "powtorzenie")
     
-    # wybranie nazw kolumn, które zawierają kontrolę (sama pożywka)
-    kontrola <- unlist(wzor[which(wzor[,2] == "blank"),1])
-    
     # usunięcie kolumny blank z danych - zawiera zazwyczaj same 0
     bioscreen <- bioscreen[,-2]
     
     # dodanie kolumny czas zwierającej kolejne wartości co 10 minut zaczynając od 0
     bioscreen$czas <- seq(0, (nrow(bioscreen)-1)*input$czas_bio, input$czas_bio)
+    
+    if(input$pomin_blank == FALSE){
+    
+    # wybranie nazw kolumn, które zawierają kontrolę (sama pożywka)
+    kontrola <- unlist(wzor[which(wzor[,2] == "blank"),1])
+    
+    } else {
+      # dummy dataset for the gather function
+      kontrola <-  data.frame()
+    }
     
     # przejście do formatu wąskiego, kolumny czas, Time i wszystkie zawierające pomiary blank są traktowane jako 
     # wartości identyfikujące. Kolumna nazwa będzie zawierać dotychczasowe nazwy kolumn, a kolumna absorbancja 
@@ -91,29 +98,48 @@ app_server <- function( input, output, session ) {
     # kolumna blank, dołączamy do wejściowych danych (test3) i odrzucamy kolumny zawierające X (nie będą już 
     # potrzebne), na koniec odejmujemy od wartości absorbancji blank
     
+    if(input$pomin_blank == FALSE){
+    
     bioscreen %>% dplyr::group_by(szczep, powtorzenie, czas) %>%
       dplyr::select(kontrola) %>%
       tidyr::gather("well", "blank", -szczep, -powtorzenie, -czas) -> 
-      dane_blank
+      dane_blank_do_wykresu
     
     #sprawdzenie czy w w blankach któryś nie przerósł - absorbancja powinna być w miarę stała w czasie eksperymentu
-    dane_blank %>% dplyr::group_by(szczep, powtorzenie, well) %>%
+    dane_blank_do_wykresu %>% dplyr::group_by(szczep, powtorzenie, well) %>%
       dplyr::mutate(range_blank = max(blank) - min(blank),
                     blank = ifelse(range_blank >= input$usun_blank, NA, blank)) %>%
-      dplyr::filter(!is.na(blank)) -> 
-      dane_blank
-    
-    dane_blank %>%
+      dplyr::filter(!is.na(blank)) %>%
       dplyr::group_by(szczep, powtorzenie, czas) %>%
       dplyr::summarize(blank = mean(blank)) %>%
       dplyr::left_join(bioscreen, by = c("szczep", "powtorzenie", "czas")) %>%
-      dplyr::select(szczep, powtorzenie, czas, blank, absorbancja) %>%
+      dplyr::select(szczep, powtorzenie, czas, blank, absorbancja) -> 
+      dane_blank
+    
+    } else {
+      
+      
+      bioscreen %>% 
+        dplyr::mutate(blank = 0) %>%
+        dplyr::select(szczep, powtorzenie, czas, blank, absorbancja) ->
+        dane_blank
+      
+      # dummy dataset for the blankplot
+      dane_blank_do_wykresu <- data.frame()
+      
+    }
+    
+    dane_blank %>%
+      dplyr::group_by(szczep, powtorzenie, czas) %>%
+      dplyr::filter(szczep != 'blank') %>%
       dplyr::mutate(value = absorbancja - blank) -> 
       dane
     
+    
+    
     return(list(dane, 
                 mapa,
-                dane_blank))
+                dane_blank_do_wykresu))
     
   })
   

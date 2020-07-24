@@ -28,7 +28,8 @@ app_ui <- function(request) {
                                              numericInput('linie_usun', "Ile linijek pominąć podczas wczytywania pliku xlsx (zwykle 2)", 2),
                                              numericInput('czas_bio', 'Co ile minut wykonywano pomiar absorbancji?', 10),
                                              numericInput("usun_blank", "Usuń pomiary dla blank jeżeli różnica pomiędzy minimu a maksimum przekracza:",
-                                                          value = 0.1, min = 0, max = 1, step = 0.05)
+                                                          value = 0.1, min = 0, max = 1, step = 0.05),
+                                             checkboxInput('pomin_blank', "Czy pominąć odejmowanie wartości blank?", value = FALSE)
                             ),
                             conditionalPanel(condition = 'input.czy_filtr == "Tak"',
                                              fileInput('dane_filtr', 'Wybierz plik csv zawierający odfiltrowane dane, zapisane wcześniej z shiny')
@@ -43,8 +44,10 @@ app_ui <- function(request) {
                             tableOutput("dane"),
                             h4("Wczytana mapa płytki"),
                             tableOutput("mapa"),
-                            h4("Absorbancja studzienek blank - czysta pożywka"),
-                            plotOutput("wykres_blank"),
+                            conditionalPanel(condition =  '!input.pomin_blank', 
+                                             h4("Absorbancja studzienek blank - czysta pożywka"),
+                                             plotOutput("wykres_blank")
+                            ),
                             width = 9
                           )
                         )
