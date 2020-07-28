@@ -76,10 +76,10 @@ app_server <- function( input, output, session ) {
     bioscreen$czas <- seq(0, (nrow(bioscreen)-1)*input$czas_bio, input$czas_bio)
     
     if(input$pomin_blank == FALSE){
-    
-    # wybranie nazw kolumn, które zawierają kontrolę (sama pożywka)
-    kontrola <- unlist(wzor[which(wzor[,2] == "blank"),1])
-    
+      
+      # wybranie nazw kolumn, które zawierają kontrolę (sama pożywka)
+      kontrola <- unlist(wzor[which(wzor[,2] == "blank"),1])
+      
     } else {
       # dummy dataset for the gather function
       kontrola <-  data.frame()
@@ -99,23 +99,23 @@ app_server <- function( input, output, session ) {
     # potrzebne), na koniec odejmujemy od wartości absorbancji blank
     
     if(input$pomin_blank == FALSE){
-    
-    bioscreen %>% dplyr::group_by(szczep, powtorzenie, czas) %>%
-      dplyr::select(kontrola) %>%
-      tidyr::gather("well", "blank", -szczep, -powtorzenie, -czas) -> 
-      dane_blank_do_wykresu
-    
-    #sprawdzenie czy w w blankach któryś nie przerósł - absorbancja powinna być w miarę stała w czasie eksperymentu
-    dane_blank_do_wykresu %>% dplyr::group_by(szczep, powtorzenie, well) %>%
-      dplyr::mutate(range_blank = max(blank) - min(blank),
-                    blank = ifelse(range_blank >= input$usun_blank, NA, blank)) %>%
-      dplyr::filter(!is.na(blank)) %>%
-      dplyr::group_by(szczep, powtorzenie, czas) %>%
-      dplyr::summarize(blank = mean(blank)) %>%
-      dplyr::left_join(bioscreen, by = c("szczep", "powtorzenie", "czas")) %>%
-      dplyr::select(szczep, powtorzenie, czas, blank, absorbancja) -> 
-      dane_blank
-    
+      
+      bioscreen %>% dplyr::group_by(szczep, powtorzenie, czas) %>%
+        dplyr::select(kontrola) %>%
+        tidyr::gather("well", "blank", -szczep, -powtorzenie, -czas) -> 
+        dane_blank_do_wykresu
+      
+      #sprawdzenie czy w w blankach któryś nie przerósł - absorbancja powinna być w miarę stała w czasie eksperymentu
+      dane_blank_do_wykresu %>% dplyr::group_by(szczep, powtorzenie, well) %>%
+        dplyr::mutate(range_blank = max(blank) - min(blank),
+                      blank = ifelse(range_blank >= input$usun_blank, NA, blank)) %>%
+        dplyr::filter(!is.na(blank)) %>%
+        dplyr::group_by(szczep, powtorzenie, czas) %>%
+        dplyr::summarize(blank = mean(blank)) %>%
+        dplyr::left_join(bioscreen, by = c("szczep", "powtorzenie", "czas")) %>%
+        dplyr::select(szczep, powtorzenie, czas, blank, absorbancja) -> 
+        dane_blank
+      
     } else {
       
       
@@ -272,13 +272,19 @@ app_server <- function( input, output, session ) {
       dplyr::filter(warunki %in% input$warunki) %>%
       dplyr::filter(czas <= input$filtr_czas[2]*60, czas >= input$filtr_czas[1]*60) -> dane
     
-    p <- ggplot2::ggplot(dane, environment = envir, ggplot2::aes(x = czas/60, y = pomiar, color = szczep))
-    
-    p <- p + ggplot2::geom_line(size = 1)+
-      ggplot2::facet_wrap(~ warunki)+
+    p <- ggplot2::ggplot(dane, environment = envir, 
+                         ggplot2::aes(x = czas/60, y = pomiar, color = szczep))
+    if(input$hide_curves == 'Nie'){
+      p <- p + ggplot2::geom_line(size = 1)
+    }
+    p <- p + ggplot2::facet_wrap(~ warunki)+
       ggplot2::theme_bw()+
       ggplot2::theme(text = ggplot2::element_text(size = 15))+
       ggplot2::scale_color_viridis_d(name = input$legend)
+    
+    if(input$smooth == 'Tak'){
+      p <- p + ggplot2::geom_smooth(span = input$span, size = 2.5)
+    }
     
     if(input$sd == 'Tak'){
       p <- p + ggplot2::geom_ribbon(ggplot2::aes(x = czas/60, fill = szczep, ymin = min, ymax = max),
@@ -296,7 +302,7 @@ app_server <- function( input, output, session ) {
       dane2 <- cbind(dane, nowe_dane)
       
       p <- p + ggplot2::geom_line(data = dane2, ggplot2::aes(x = czas/60, y = nowe_dane, color = szczep),
-                                  size = 2)
+                                  size = 2.5)
       
     }
     p <- p + ggplot2::xlab(input$xlab)+
