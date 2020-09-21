@@ -19,7 +19,8 @@ Imports:
     readxl,
     shinythemes,
     pkgload,
-    drc
+    drc,
+    svglite
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.1
