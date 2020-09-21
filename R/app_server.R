@@ -365,17 +365,24 @@ app_server <- function( input, output, session ) {
   })
   
   output$download_wykres <- downloadHandler(
-    filename = function() { paste(input$dataset, '.png', sep='') },
-    content = function(file) {
+    filename = function() { 
       if(input$plot_type == 'png'){
-      png(file, res = input$res, width = input$width, input$height, unit = 'cm')
-      print(krzywefinalInput())
-      dev.off()
+        paste(input$dataset, '.png', sep='')
       }
       if(input$plot_type == 'svg'){
-      svglite::svglite(file, width = input$width/2.54, input$height/2.54)
-      print(krzywefinalInput())
-      dev.off()
+        paste(input$dataset, '.svg', sep='')
+      }
+    },
+    content = function(file) {
+      if(input$plot_type == 'png'){
+        png(file, res = input$res, width = input$width, input$height, unit = 'cm')
+        print(krzywefinalInput())
+        dev.off()
+      }
+      if(input$plot_type == 'svg'){
+        svglite::svglite(file, width = input$width/2.54, input$height/2.54)
+        print(krzywefinalInput())
+        dev.off()
       }
     })
   
