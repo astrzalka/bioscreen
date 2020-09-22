@@ -365,17 +365,18 @@ app_server <- function( input, output, session ) {
   })
   
   output$download_wykres <- downloadHandler(
-    filename = function() { 
-      if(input$plot_type == 'png'){
-        paste(input$dataset, '.png', sep='')
-      }
-      if(input$plot_type == 'svg'){
-        paste(input$dataset, '.svg', sep='')
-      }
-    },
+    # filename = function() { 
+    #   # if(input$plot_type == 'png'){
+    #     paste(input$dataset, '.png', sep='')
+    #   # }
+    #   # if(input$plot_type == 'svg'){
+    #   #   paste(input$dataset, '.svg', sep='')
+    #   # }
+    # },
+    filename = function() { paste(input$dataset, '.png', sep='') },
     content = function(file) {
       if(input$plot_type == 'png'){
-        png(file, res = input$res, width = input$width, input$height, unit = 'cm')
+        grDevices::png(file, res = input$res, width = input$width, input$height, unit = 'cm')
         print(krzywefinalInput())
         dev.off()
       }
@@ -384,7 +385,8 @@ app_server <- function( input, output, session ) {
         print(krzywefinalInput())
         dev.off()
       }
-    })
+    }
+  )
   
   output$downloadData <- downloadHandler(
     filename = function() {
