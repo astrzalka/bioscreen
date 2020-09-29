@@ -75,7 +75,7 @@ app_server <- function( input, output, session ) {
     # dodanie kolumny czas zwierającej kolejne wartości co 10 minut zaczynając od 0
     bioscreen$czas <- seq(0, (nrow(bioscreen)-1)*input$czas_bio, input$czas_bio)
     
-    if(input$pomin_blank == FALSE){
+    if(input$pomin_blank == TRUE){
       
       # wybranie nazw kolumn, które zawierają kontrolę (sama pożywka)
       kontrola <- unlist(wzor[which(wzor[,2] == "blank"),1])
@@ -147,7 +147,7 @@ app_server <- function( input, output, session ) {
   
   output$dane <- renderTable({
     
-    if(input$czy_filtr == 'Nie'){
+    if(input$czy_filtr == 'No'){
       head(dane_bio()[[1]], n = 10)
     } else {
       head(dane_wczytane(), n = 10)
@@ -156,7 +156,7 @@ app_server <- function( input, output, session ) {
   
   output$mapa <- renderTable({
     
-    if(input$czy_filtr == 'Nie'){
+    if(input$czy_filtr == 'No'){
       dane_bio()[[2]]
     } 
   })
@@ -184,7 +184,7 @@ app_server <- function( input, output, session ) {
     
     dane <- dane_2
     
-    if(input$wyrownac == 'Tak'){
+    if(input$wyrownac == 'Yes'){
       dane <- dane %>% dplyr::group_by(szczep, powtorzenie) %>%
         dplyr::mutate(value = value - min(value))
     }
@@ -203,8 +203,8 @@ app_server <- function( input, output, session ) {
     p <- p + ggplot2::geom_line()+
       ggplot2::facet_wrap(~ szczep)+
       ggplot2::theme_bw()+
-      ggplot2::xlab('Czas')+
-      ggplot2::ylab('Absorbancja')+
+      ggplot2::xlab('Time')+
+      ggplot2::ylab('Absorbance')+
       ggplot2::scale_color_discrete(name = '')
     
     print(p)
@@ -245,13 +245,13 @@ app_server <- function( input, output, session ) {
     p <- ggplot2::ggplot(dane_blank, ggplot2::aes(x = czas, y = blank, color = well))
     p <- p + ggplot2::geom_line()
     p <- p + ggplot2::theme_bw()
-    p <- p + ggplot2::xlab("Czas") + ggplot2::ylab('Absorbancja blanka')
+    p <- p + ggplot2::xlab("Time") + ggplot2::ylab('Blank absorbance')
     
     return(p)
   })
   
   output$wykres_blank <- renderPlot({
-    if(input$czy_filtr == 'Nie'){
+    if(input$czy_filtr == 'No'){
       if (!is.null(input$dane_mapa)&!is.null(input$dane_bio))
         print(krzywe_blank())
     }
@@ -262,7 +262,7 @@ app_server <- function( input, output, session ) {
     
     envir <- environment()
     
-    if(input$czy_filtr == 'Nie'){
+    if(input$czy_filtr == 'No'){
       dane <- dane_final()
     } else {
       dane <- dane_wczytane()
@@ -274,7 +274,7 @@ app_server <- function( input, output, session ) {
     
     p <- ggplot2::ggplot(dane, environment = envir, 
                          ggplot2::aes(x = czas/60, y = pomiar, color = szczep))
-    if(input$hide_curves == 'Nie'){
+    if(input$hide_curves == 'No'){
       p <- p + ggplot2::geom_line(size = 1)
     }
     p <- p + ggplot2::facet_wrap(~ warunki)+
@@ -282,17 +282,17 @@ app_server <- function( input, output, session ) {
       ggplot2::theme(text = ggplot2::element_text(size = 15))+
       ggplot2::scale_color_viridis_d(name = input$legend)
     
-    if(input$smooth == 'Tak'){
+    if(input$smooth == 'Yes'){
       p <- p + ggplot2::geom_smooth(span = input$span, size = 2.5)
     }
     
-    if(input$sd == 'Tak'){
+    if(input$sd == 'Yes'){
       p <- p + ggplot2::geom_ribbon(ggplot2::aes(x = czas/60, fill = szczep, ymin = min, ymax = max),
                                     alpha = 0.33)+
         ggplot2::scale_fill_viridis_d(name = input$legend)
     }
     
-    if(input$ll == 'Tak'){
+    if(input$ll == 'Yes'){
       
       #library(drc)
       model <- drc::drm(pomiar~czas, curveid = szczep, data = dane, fct = drc::LL.3())
@@ -311,7 +311,7 @@ app_server <- function( input, output, session ) {
   })  
   
   output$krzywe_final <- renderPlot({
-    if(input$czy_filtr == 'Nie'){
+    if(input$czy_filtr == 'No'){
       if (is.null(input$dane_mapa)&is.null(input$dane_bio))
         return(NULL)
     }
@@ -320,7 +320,7 @@ app_server <- function( input, output, session ) {
   
   output$filtr_czas <- renderUI({
     
-    if(input$czy_filtr == 'Nie'){
+    if(input$czy_filtr == 'No'){
       dane <- dane_final()
     } else {
       dane <- dane_wczytane()
@@ -328,13 +328,13 @@ app_server <- function( input, output, session ) {
     
     max_czas <- round(max(dane$czas)/60)
     
-    sliderInput('filtr_czas', 'Podaj zakres czasu w godzinach', 0, max_czas, value = c(0, max_czas))
+    sliderInput('filtr_czas', 'Choose time range [h]', 0, max_czas, value = c(0, max_czas))
     
   })
   
   output$szczepy <- renderUI({
     
-    if(input$czy_filtr == 'Nie'){
+    if(input$czy_filtr == 'No'){
       dane <- dane_final()
     } else {
       dane <- dane_wczytane()
@@ -342,7 +342,7 @@ app_server <- function( input, output, session ) {
     
     szczepy <- unique(dane$szczep)
     
-    checkboxGroupInput("szczepy", label = ("Wybierz szczepy"), 
+    checkboxGroupInput("szczepy", label = ("Choose strains"), 
                        choices = szczepy,
                        selected = szczepy)
     
@@ -350,7 +350,7 @@ app_server <- function( input, output, session ) {
   
   output$warunki <- renderUI({
     
-    if(input$czy_filtr == 'Nie'){
+    if(input$czy_filtr == 'No'){
       dane <- dane_final()
     } else {
       dane <- dane_wczytane()
@@ -358,7 +358,7 @@ app_server <- function( input, output, session ) {
     
     warunki <- unique(dane$warunki)
     
-    checkboxGroupInput("warunki", label = ("Wybierz warunki"), 
+    checkboxGroupInput("warunki", label = ("Choose conditions"), 
                        choices = warunki,
                        selected = warunki)
     
