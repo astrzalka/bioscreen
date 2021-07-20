@@ -98,7 +98,7 @@ app_server <- function( input, output, session ) {
     # kolumna blank, dołączamy do wejściowych danych (test3) i odrzucamy kolumny zawierające X (nie będą już 
     # potrzebne), na koniec odejmujemy od wartości absorbancji blank
     
-    if(input$pomin_blank == FALSE){
+    if(input$pomin_blank == TRUE){
       
       bioscreen %>% dplyr::group_by(szczep, powtorzenie, czas) %>%
         dplyr::select(kontrola) %>%
