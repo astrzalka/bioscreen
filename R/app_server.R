@@ -54,6 +54,15 @@ app_server <- function( input, output, session ) {
       
       bioscreen <- data
     }
+    
+    if(input$format == 'txt'){
+      
+      x <- readr::read_delim(inFile_excel_bio$datapath, col_names = FALSE)
+      #x <- x[,-1]
+      colnames(x) <- c('Time', 'Blank', 1:(ncol(x)-2))
+      bioscreen <- x
+      
+    }
     # tabela z nazwami kolumn z bioscreena
     wzor <- mapa[13:22, 2:21]
     
