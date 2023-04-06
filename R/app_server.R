@@ -291,7 +291,7 @@ app_server <- function( input, output, session ) {
     p <- p + ggplot2::facet_wrap(~ warunki)+
       ggplot2::theme_bw()+
       ggplot2::theme(text = ggplot2::element_text(size = 15))+
-      ggplot2::scale_color_viridis_d(name = input$legend)
+      ggplot2::scale_color_viridis_d(name = input$legend, option = input$viridis_option, end = 0.95)
     
     if(input$smooth == 'Yes'){
       p <- p + ggplot2::geom_smooth(span = input$span, size = 2.5)
