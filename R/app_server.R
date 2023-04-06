@@ -230,8 +230,10 @@ app_server <- function( input, output, session ) {
     dane <- dane_filtr()
     
     dane <- dane %>% dplyr::group_by(szczep, czas) %>%
-      dplyr::summarize(pomiar = mean(value), odch = sd(value), n = dplyr::n(),
-                       min = pomiar - odch, max = pomiar + odch) %>%
+      dplyr::summarize(pomiar = mean(value), odch = sd(value), n = dplyr::n()) %>%
+      dplyr::group_by(szczep) %>%
+      dplyr::mutate(pomiar = pomiar - min(pomiar),
+                    min = pomiar - odch, max = pomiar + odch) %>%
       tidyr::separate(szczep, into = c('szczep', 'warunki'), sep = '/')
     
     return(dane)
@@ -318,6 +320,67 @@ app_server <- function( input, output, session ) {
       ggplot2::ylab(input$ylab)
     print(p)
   })  
+  
+  model_ll <- reactive({
+    
+    if(input$ll == 'Yes'){
+      
+      if(input$czy_filtr == 'No'){
+        dane <- dane_final()
+      } else {
+        dane <- dane_wczytane()
+      }
+      
+      dane %>% dplyr::filter(szczep %in% input$szczepy) %>%
+        dplyr::filter(warunki %in% input$warunki) %>%
+        dplyr::filter(czas <= input$filtr_czas[2]*60, czas >= input$filtr_czas[1]*60) -> dane
+      
+      model <- drc::drm(pomiar~czas, curveid = szczep, data = dane, fct = drc::LL.3())
+      
+      summary(model)$coefficients %>% as.data.frame() -> model_tabela
+      
+      model_tabela %>% dplyr::mutate(strain = rownames(model_tabela)) %>% 
+        tidyr::separate(strain, into = c('parameter', 'strain'), sep = ':') %>%
+        dplyr::select(strain, parameter, Estimate, `Std. Error`, `p-value`) %>%
+        #dplyr::arrange(strain) %>%
+        dplyr::mutate(parameter = dplyr::case_when(parameter == 'e' ~ 'ED50',
+                                                   parameter == 'd' ~ 'maximum',
+                                                   parameter == 'b' ~ 'slope'),
+                      parameter = factor(parameter, levels = c('ED50', 'maximum', 'slope')),
+                      Estimate = ifelse(parameter == 'ED50', Estimate/60, Estimate),
+                      Estimate = ifelse(parameter == 'slope', Estimate*(-1), Estimate),
+                      `Std. Error` = ifelse(parameter == 'ED50', `Std. Error`/60, `Std. Error`),
+                      signif_code = dplyr::case_when(`p-value` > 0.05 ~ 'ns',
+                                                     `p-value` <= 0.05 & `p-value` > 0.01 ~ '*',
+                                                     `p-value` <= 0.01 & `p-value` > 0.001 ~ '**',
+                                                     `p-value` <= 0.001 & `p-value` > 0.0001 ~ '***',
+                                                     `p-value` <= 0.0001 ~ '****')) -> model_tabela
+      
+      rownames(model_tabela) <- NULL
+      
+      model_tabela %>% dplyr::filter(parameter == 'ED50') %>% dplyr::select(strain, Estimate) %>%
+        dplyr::right_join(dane, by = c('strain' = 'szczep')) %>%
+        dplyr::group_by(strain) %>%
+        dplyr::filter(czas >= ((Estimate-1)*60), czas <= ((Estimate+1)*60)) %>%
+        dplyr::mutate(change = pomiar-dplyr::lag(pomiar)) %>%
+        dplyr::summarise(change_mean = mean(change, na.rm = TRUE),
+                  change_sd = sd(change, na.rm = TRUE)) %>%
+        dplyr::rename(Estimate = change_mean, `Std. Error` = change_sd) %>%
+        dplyr::mutate(parameter = 'change_OD', `p-value` = NA, signif_code = NA) %>%
+        dplyr::select(strain, parameter, Estimate, `Std. Error`, `p-value`, signif_code)->
+        tabela_change
+      
+      model_tabela %>% dplyr::bind_rows(tabela_change) -> model_tabela
+      
+      return(model_tabela)
+      
+    } else {
+      return(NULL)
+    }
+  })
+  
+  output$model_tabela <- renderDataTable(model_ll())
+  
   
   output$krzywe_final <- renderPlot({
     if(input$czy_filtr == 'No'){

@@ -108,6 +108,8 @@ app_ui <- function(request) {
                           
                           mainPanel(
                             plotOutput("krzywe_final", height = "700px", width = '100%'),
+                            conditionalPanel(condition = 'input.ll == "Yes"',
+                                             dataTableOutput('model_tabela')),
                             width = 9
                           )
                         )
@@ -119,15 +121,15 @@ app_ui <- function(request) {
                         p('Each strain name should be in format: strain/condition. If all strains were grown in the same conditions then they can be saved as /0.'),
                         p('If well contains only medium and is supposed to be substracted from other growth curves it should be saved as blank,
 there can be more than one blank on the plate, their value will be averaged before substracting. There is an option to analyze growth curves without any blanks present.'),
-                        p('Example plate map and data file are available on the Github page.'),
-                        p(strong('2. Filtering -'),' allows removal if growth curves with too high absorbance, too low absorbance 
+p('Example plate map and data file are available on the Github page.'),
+p(strong('2. Filtering -'),' allows removal if growth curves with too high absorbance, too low absorbance 
                         or too different from other replicates'),
-                        p('Filtered data can be saved in csv format for further analysis'),
-                        p(strong('3. Gowth curves'),' - Plots averaged growth curves for all filtered strains. 
+p('Filtered data can be saved in csv format for further analysis'),
+p(strong('3. Gowth curves'),' - Plots averaged growth curves for all filtered strains. 
                         Only certain strains or growth conditions can be chosen,
                         standard deviation, loess trend line or log-logistic model (currently only when single conditions are chosen) can be added to the plot'),
-                        p('Finished plot can be saved in png or svg format')
-                        
+p('Finished plot can be saved in png or svg format')
+
                )
     )
   )
