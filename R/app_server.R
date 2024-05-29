@@ -61,6 +61,18 @@ app_server <- function( input, output, session ) {
       #x <- x[,-1]
       colnames(x) <- c('Time', 'Blank', 1:(ncol(x)-2))
       bioscreen <- x
+
+    }
+    
+    if(input$format == 'new_xlsx'){
+      
+      bioscreen <- readxl::read_excel(path = inFile_excel_bio$datapath, sheet = 2)
+
+      # usuwam () z nazw kolumn
+      names <- colnames(bioscreen)
+      names <- gsub('\\(', '', names)
+      names <- gsub('\\)', '', names)
+      colnames(bioscreen) <- names
       
     }
     # tabela z nazwami kolumn z bioscreena
@@ -78,8 +90,10 @@ app_server <- function( input, output, session ) {
     # zmiana nazw kolumn - żeby można było póżniej połączyć z danymi
     colnames(wzor) <- c("nazwa", "szczep", "powtorzenie")
     
-    # usunięcie kolumny blank z danych - zawiera zazwyczaj same 0
-    bioscreen <- bioscreen[,-2]
+    if(input$format != 'new_xlsx'){
+      # usunięcie kolumny blank z danych - zawiera zazwyczaj same 0
+      bioscreen <- bioscreen[,-2]
+    }
     
     # dodanie kolumny czas zwierającej kolejne wartości co 10 minut zaczynając od 0
     bioscreen$czas <- seq(0, (nrow(bioscreen)-1)*input$czas_bio, input$czas_bio)
@@ -102,6 +116,8 @@ app_server <- function( input, output, session ) {
     # łączenie tabeli z wynikami z przygotowanym wzorem nazw według nazw kolumn np. 101
     bioscreen <- dplyr::left_join(bioscreen, wzor, by = "nazwa")
     
+    bioscreen <- dplyr::filter(bioscreen, !is.na(absorbancja))
+    
     # podział‚ na grupy według szczepu, czasu i powtorzenia, wybieramy tylko kolumny zawierające X w nazwie(blanki)
     # łączymy blanki do formatu wąskiego (o ile jest więcej niż jedna), ponownie grupujemy i wyciągamy średnią - 
     # kolumna blank, dołączamy do wejściowych danych (test3) i odrzucamy kolumny zawierające X (nie będą już 
@@ -116,11 +132,11 @@ app_server <- function( input, output, session ) {
       
       #sprawdzenie czy w w blankach któryś nie przerósł - absorbancja powinna być w miarę stała w czasie eksperymentu
       dane_blank_do_wykresu %>% dplyr::group_by(szczep, powtorzenie, well) %>%
-        dplyr::mutate(range_blank = max(blank) - min(blank),
+        dplyr::mutate(range_blank = max(blank, na.rm = TRUE) - min(blank, na.rm = TRUE),
                       blank = ifelse(range_blank >= input$usun_blank, NA, blank)) %>%
         dplyr::filter(!is.na(blank)) %>%
         dplyr::group_by(szczep, powtorzenie, czas) %>%
-        dplyr::summarize(blank = mean(blank)) %>%
+        dplyr::summarize(blank = mean(blank, na.rm = TRUE)) %>%
         dplyr::left_join(bioscreen, by = c("szczep", "powtorzenie", "czas")) %>%
         dplyr::select(szczep, powtorzenie, czas, blank, absorbancja) -> 
         dane_blank
@@ -163,6 +179,10 @@ app_server <- function( input, output, session ) {
     }
   })
   
+  output$dane2 <- renderDataTable({
+    dane_bio()[[1]]
+  })
+  
   output$mapa <- renderTable({
     
     if(input$czy_filtr == 'No'){
@@ -177,14 +197,14 @@ app_server <- function( input, output, session ) {
     # podział‚ na grupy według szczepu i powtórzenia, następnie dodanie kolumny z maksymalną wartością 
     # absorbancji, usunięcie powtórzeń, których maksima nie mieszczą się w zakresie podanym przez użytkownika
     dane_1 <- dane %>% dplyr::group_by(szczep, powtorzenie) %>%
-      dplyr::mutate(maksimum = max(value)) %>%
+      dplyr::mutate(maksimum = max(value, na.rm = TRUE)) %>%
       dplyr::filter(maksimum >= input$filtr_down, maksimum <= input$filtr_up)
     
     # Obliczenie odległości od mediany absorbancji każdego powtórzenia i odrzucenie wszystkich z odległością 
     # powyżej podanej wartości
     
     dane_2 <- dane_1 %>% dplyr::group_by(szczep, czas) %>%
-      dplyr::mutate(mediana = median(value)) %>%
+      dplyr::mutate(mediana = median(value, na.rm = TRUE)) %>%
       dplyr::group_by(szczep, czas, powtorzenie) %>%
       dplyr::mutate(odl_med = value - mediana) %>%
       dplyr::group_by(szczep, powtorzenie) %>%
@@ -195,7 +215,7 @@ app_server <- function( input, output, session ) {
     
     if(input$wyrownac == 'Yes'){
       dane <- dane %>% dplyr::group_by(szczep, powtorzenie) %>%
-        dplyr::mutate(value = value - min(value))
+        dplyr::mutate(value = value - min(value, na.rm = TRUE))
     }
     
     return(dane)  
@@ -230,9 +250,9 @@ app_server <- function( input, output, session ) {
     dane <- dane_filtr()
     
     dane <- dane %>% dplyr::group_by(szczep, czas) %>%
-      dplyr::summarize(pomiar = mean(value), odch = sd(value), n = dplyr::n()) %>%
+      dplyr::summarize(pomiar = mean(value, na.rm = TRUE), odch = sd(value), n = dplyr::n()) %>%
       dplyr::group_by(szczep) %>%
-      dplyr::mutate(pomiar = pomiar - min(pomiar),
+      dplyr::mutate(pomiar = pomiar - min(pomiar, na.rm = TRUE),
                     min = pomiar - odch, max = pomiar + odch) %>%
       tidyr::separate(szczep, into = c('szczep', 'warunki'), sep = '/')
     
@@ -364,7 +384,7 @@ app_server <- function( input, output, session ) {
         dplyr::filter(czas >= ((Estimate-1)*60), czas <= ((Estimate+1)*60)) %>%
         dplyr::mutate(change = pomiar-dplyr::lag(pomiar)) %>%
         dplyr::summarise(change_mean = mean(change, na.rm = TRUE),
-                  change_sd = sd(change, na.rm = TRUE)) %>%
+                         change_sd = sd(change, na.rm = TRUE)) %>%
         dplyr::rename(Estimate = change_mean, `Std. Error` = change_sd) %>%
         dplyr::mutate(parameter = 'change_OD', `p-value` = NA, signif_code = NA) %>%
         dplyr::select(strain, parameter, Estimate, `Std. Error`, `p-value`, signif_code)->
